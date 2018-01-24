@@ -1,0 +1,14 @@
+{
+  "name": "ddz_logic",
+  "version": "1.0.0",
+  "description": "斗地主游戏逻辑",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "pm2 start test/test.js"
+  },
+  "author": "Ximena",
+  "license": "ISC"
+}

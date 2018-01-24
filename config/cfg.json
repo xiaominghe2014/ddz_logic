@@ -1,0 +1,7 @@
+{
+  "name": "config",
+  "version": "0.0.1",
+  "pairCount":1,
+  "playerCount": 3,
+  "dealConfig":[17,17,17]
+}
