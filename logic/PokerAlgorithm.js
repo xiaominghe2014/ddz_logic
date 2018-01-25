@@ -323,10 +323,9 @@ PokerAlgorithm.isSanShun = function (pokers) {
             let pW = this.getPokersWeight(pokers);
             //0,3,6,9...len
             let count = len / 3;
-            for (let i = 3; i < count ; i+=3){
-                if( 3 == wInfo[pW[i-3]] &&
-                    3 == wInfo[pW[i]] &&
-                    pW[i-3]+1 == pW[i]){
+            for (let i = 0; i < count-1 ; i++){
+                if( 3 == wInfo[pW[i*3]] &&
+                    pW[i*3]+1 == pW[i*3+3]){
                     continue;
                 }else {
                     return false;
@@ -371,8 +370,8 @@ PokerAlgorithm.isFeiJiDan2Lian = function(pokers){
         for(let i = 0 ; i < 3 ; i ++ ){
             let info = wIndex[i];
             if( info[1]<13&&
-                3==wInfo[info[0]]&&
-                3==wInfo[info[1]]){
+                3<=wInfo[info[0]]&&
+                3<=wInfo[info[0]+1]){
                 return {
                     flag : true,
                     weight : info[0]
@@ -415,9 +414,9 @@ PokerAlgorithm.isFeiJiDan3Lian = function(pokers){
         for(let i = 0 ; i < 4 ; i ++ ){
             let info = wIndex[i];
             if( info[2]<13 &&
-                3==wInfo[info[0]]&&
-                3==wInfo[info[1]]&&
-                3==wInfo[info[2]]){
+                3<=wInfo[info[0]]&&
+                3<=wInfo[info[0]+1]&&
+                3<=wInfo[info[0]+2]){
                 return {
                     flag : true,
                     weight : info[0]
@@ -461,18 +460,13 @@ PokerAlgorithm.isFeiJiDan4Lian = function(pokers){
         for (let i = 0 ; i < 5 ; i++){
             let info = wIndex[i];
             if( info[3]<13 &&
-                3==wInfo[info[0]]&&
-                3==wInfo[info[1]]&&
-                3==wInfo[info[2]]&&
-                3==wInfo[info[3]]){
-                if( info[0]+1 == info[1]&&
-                    info[1]+1 == info[2]&&
-                    info[2]+1 == info[3]&&
-                    info[3]+1 == info[4]){
-                    return {
+                3<=wInfo[info[0]]&&
+                3<=wInfo[info[0]+1]&&
+                3<=wInfo[info[0]+2]&&
+                3<=wInfo[info[0]+3]){
+                return {
                         flag:true,
                         weight:info[0]
-                    }
                 }
             }
         }
@@ -517,20 +511,15 @@ PokerAlgorithm.isFeiJiDan5Lian = function(pokers){
         for (let i = 0 ; i < 6 ; i++){
             let info = wIndex[i];
             if( info[4]<13 &&
-                3 == wInfo[info[0]]&&
-                3 == wInfo[info[1]]&&
-                3 == wInfo[info[2]]&&
-                3 == wInfo[info[3]]&&
-                3 == wInfo[info[4]]){
-                    if( info[0]+1 == info[1] &&
-                        info[1]+1 == info[2] &&
-                        info[2]+1 == info[3] &&
-                        info[3]+1 == info[4]){
-                        return {
-                            flag : true,
-                            weight : info[0]
-                        }
-                    }
+                3 <= wInfo[info[0]]&&
+                3 <= wInfo[info[0]+1]&&
+                3 <= wInfo[info[0]+2]&&
+                3 <= wInfo[info[0]+3]&&
+                3 <= wInfo[info[0]+4]){
+                return {
+                    flag : true,
+                    weight : info[0]
+                }
             }
         }
     }
@@ -789,6 +778,9 @@ PokerAlgorithm.is4Dai2Dui = function (pokers) {
  * }
  */
 PokerAlgorithm.getPokersType = function (pokers) {
+    pokers.sort(function(a,b){
+        return PokerAlgorithm.pokerWeight(a)-PokerAlgorithm.pokerWeight(b);
+    });
     let res = {
         cards:pokers,
         type:ERROR_NO,
@@ -803,6 +795,7 @@ PokerAlgorithm.getPokersType = function (pokers) {
 
     if (1==len) {
         res.type =  PokerPair.pokersType.dan_zh;
+        res.typeWight = this.pokerTypeWeight[res.type];
         return res;
     }
     let w2 = this.pokerWeight(pokers[1]);
@@ -810,11 +803,11 @@ PokerAlgorithm.getPokersType = function (pokers) {
     if (2==len){
         if(w1 == w2){
             res.type =  PokerPair.pokersType.dui_zi;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
         }
         if(14==w1&&15==w2){
             res.type =  PokerPair.pokersType.huo_ji;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
         }
         return res;
     }
@@ -822,7 +815,7 @@ PokerAlgorithm.getPokersType = function (pokers) {
     if(3==len){
         if(w1==w3){
             res.type =  PokerPair.pokersType.san_zh;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
         }
         return res;
     }
@@ -830,12 +823,12 @@ PokerAlgorithm.getPokersType = function (pokers) {
     if(4==len){
         if(w1==w4){
             res.type =  PokerPair.pokersType.zha_dan;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
         }
         else if((w1==w3)
         ||(w2==w4)){
             res.type =  PokerPair.pokersType.san_dai_1;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = w2;
         }
         return res;
@@ -845,12 +838,12 @@ PokerAlgorithm.getPokersType = function (pokers) {
         if((w1==w3&&w4==w5)
         ||(w1==w2&&w3==w5)){
             res.type =  PokerPair.pokersType.san_dai_2;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = w3;
         }
         else if(this.isShunzi(pokers)){
             res.type =  PokerPair.pokersType.shun_zi;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = w1;
             res.repeated = len;
         }
@@ -861,25 +854,25 @@ PokerAlgorithm.getPokersType = function (pokers) {
         //顺子，连对，三顺，4带2
        if(this.isShunzi(pokers)){
            res.type =  PokerPair.pokersType.shun_zi;
-           res.typeWight = PokerPair.weightMap[res.type];
+           res.typeWight = this.pokerTypeWeight[res.type];
            res.weight = w1;
            res.repeated = len;
        }
        else if(this.isLianDui(pokers)){
            res.type =  PokerPair.pokersType.lian_dui;
-           res.typeWight = PokerPair.weightMap[res.type];
+           res.typeWight = this.pokerTypeWeight[res.type];
            res.weight = w1;
            res.repeated = len/2;
        }
        else if(this.isSanShun(pokers)){
            res.type =  PokerPair.pokersType.san_shun;
-           res.typeWight = PokerPair.weightMap[res.type];
+           res.typeWight = this.pokerTypeWeight[res.type];
            res.weight = w1;
            res.repeated = len/3;
        }
        else if(this.is4Dai2(pokers)){
            res.type =  PokerPair.pokersType.si_dai_2;
-           res.typeWight = PokerPair.weightMap[res.type];
+           res.typeWight = this.pokerTypeWeight[res.type];
            res.weight = w3;
        }
        return res;
@@ -888,7 +881,7 @@ PokerAlgorithm.getPokersType = function (pokers) {
     if(7==len){
         if(this.isShunzi(pokers)){
             res.type =  PokerPair.pokersType.shun_zi;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = w1;
             res.repeated = len;
         }
@@ -899,20 +892,20 @@ PokerAlgorithm.getPokersType = function (pokers) {
         //顺子 连对 二连飞机(单) 4带2对
         if(this.isShunzi(pokers)){
             res.type =  PokerPair.pokersType.shun_zi;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = w1;
             res.repeated = len;
         }
         if(this.isLianDui(pokers)){
             res.type =  PokerPair.pokersType.lian_dui;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = w1;
             res.repeated = len/2;
         }
         let dai2Dui = this.is4Dai2Dui(pokers);
         if(dai2Dui){
             res.type = PokerPair.pokersType.si_dai_2_dui;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = dai2Dui.weight;
             //4带2优于飞机
             return res;
@@ -920,7 +913,7 @@ PokerAlgorithm.getPokersType = function (pokers) {
         let feiJ = this.isFeiJiDan2Lian(pokers);
         if(feiJ){
             res.type =  PokerPair.pokersType.fei_ji_dan;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = feiJ.weight;
             res.repeated = len/4;
         }
@@ -931,13 +924,13 @@ PokerAlgorithm.getPokersType = function (pokers) {
     if(9==len){
         if(this.isShunzi(pokers)){
             res.type =  PokerPair.pokersType.shun_zi;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = w1;
             res.repeated = len;
         }
         else if(this.isSanShun(pokers)){
             res.type =  PokerPair.pokersType.san_shun;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = w1;
             res.repeated = len/3;
         }
@@ -947,20 +940,20 @@ PokerAlgorithm.getPokersType = function (pokers) {
         //顺子 连对 二连飞机(双)
         if(this.isShunzi(pokers)){
             res.type =  PokerPair.pokersType.shun_zi;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = w1;
             res.repeated = len;
         }
         if(this.isLianDui(pokers)){
             res.type =  PokerPair.pokersType.lian_dui;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = w1;
             res.repeated = len/2;
         }
         let feiJ = this.isFeiJiSh2Lian(pokers)
         if(feiJ){
             res.type = PokerPair.pokersType.fei_ji_sh;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = feiJ.weight;
             res.repeated = len/5;
         }
@@ -969,7 +962,7 @@ PokerAlgorithm.getPokersType = function (pokers) {
     if(11==len){
         if(this.isShunzi(pokers)){
             res.type =  PokerPair.pokersType.shun_zi;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = w1;
             res.repeated = len;
         }
@@ -979,20 +972,20 @@ PokerAlgorithm.getPokersType = function (pokers) {
         //顺子 连对 三顺 3连飞机单
         if(this.isShunzi(pokers)){
             res.type =  PokerPair.pokersType.shun_zi;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = w1;
             res.repeated = len;
         }
         if(this.isLianDui(pokers)){
             res.type =  PokerPair.pokersType.lian_dui;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = w1;
             res.repeated = len/2;
         }
         //三顺优于飞机
         if(this.isSanShun(pokers)){
             res.type =  PokerPair.pokersType.san_shun;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = w1;
             res.repeated = len/3;
             return res;
@@ -1000,7 +993,7 @@ PokerAlgorithm.getPokersType = function (pokers) {
         let feiJ = this.isFeiJiDan3Lian(pokers);
         if(feiJ){
             res.type = PokerPair.pokersType.fei_ji_dan;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = feiJ.weight;
             res.repeated = len /4;
         }
@@ -1012,7 +1005,7 @@ PokerAlgorithm.getPokersType = function (pokers) {
     if(14==len){
         if(this.isLianDui(pokers)){
             res.type =  PokerPair.pokersType.lian_dui;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = w1;
             res.repeated = len/2;
         }
@@ -1022,14 +1015,14 @@ PokerAlgorithm.getPokersType = function (pokers) {
         //三顺 三连飞机(双)
         if(this.isSanShun(pokers)){
             res.type =  PokerPair.pokersType.san_shun;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = w1;
             res.repeated = len/3;
         }
         let feiJ = this.isFeiJiSh3Lian(pokers);
         if(feiJ){
             res.type = PokerPair.pokersType.fei_ji_sh;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = feiJ.weight;
             res.repeated = len/5;
         }
@@ -1039,14 +1032,14 @@ PokerAlgorithm.getPokersType = function (pokers) {
         //连对 4连飞机(单)
         if(this.isLianDui(pokers)){
             res.type =  PokerPair.pokersType.lian_dui;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = w1;
             res.repeated = len/2;
         }
         let feiJ = this.isFeiJiDan4Lian(pokers);
         if(feiJ){
             res.type = PokerPair.pokersType.fei_ji_dan;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = feiJ.weight;
             res.repeated = len /4;
         }
@@ -1058,13 +1051,13 @@ PokerAlgorithm.getPokersType = function (pokers) {
     if(18==len){
         if(this.isLianDui(pokers)){
             res.type =  PokerPair.pokersType.lian_dui;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = w1;
             res.repeated = len/2;
         }
         if(this.isSanShun(pokers)){
             res.type =  PokerPair.pokersType.san_shun;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = w1;
             res.repeated = len/3;
         }
@@ -1077,21 +1070,21 @@ PokerAlgorithm.getPokersType = function (pokers) {
         //连对 5连飞机单 4连飞机双
         if(this.isLianDui(pokers)){
             res.type =  PokerPair.pokersType.lian_dui;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = w1;
             res.repeated = len/2;
         }
         let feiJdan = this.isFeiJiDan5Lian(pokers);
         if(feiJdan){
             res.type = PokerPair.pokersType.fei_ji_dan;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = feiJdan.weight;
             res.repeated = len /4;
         }
         let feiJsh = this.isFeiJiSh4Lian(pokers);
         if(feiJsh){
             res.type = PokerPair.pokersType.fei_ji_sh;
-            res.typeWight = PokerPair.weightMap[res.type];
+            res.typeWight = this.pokerTypeWeight[res.type];
             res.weight = feiJsh.weight;
             res.repeated = len /5;
         }
