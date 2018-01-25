@@ -909,6 +909,14 @@ PokerAlgorithm.getPokersType = function (pokers) {
             res.weight = w1;
             res.repeated = len/2;
         }
+        let dai2Dui = this.is4Dai2Dui(pokers);
+        if(dai2Dui){
+            res.type = PokerPair.pokersType.si_dai_2_dui;
+            res.typeWight = PokerPair.weightMap[res.type];
+            res.weight = dai2Dui.weight;
+            //4带2优于飞机
+            return res;
+        }
         let feiJ = this.isFeiJiDan2Lian(pokers);
         if(feiJ){
             res.type =  PokerPair.pokersType.fei_ji_dan;
@@ -917,12 +925,6 @@ PokerAlgorithm.getPokersType = function (pokers) {
             res.repeated = len/4;
         }
         //4带2优于飞机
-        let dai2Dui = this.is4Dai2Dui(pokers);
-        if(dai2Dui){
-            res.type = PokerPair.pokersType.si_dai_2_dui;
-            res.typeWight = PokerPair.weightMap[res.type];
-            res.weight = dai2Dui.weight;
-        }
         return res;
     }
 
@@ -987,19 +989,20 @@ PokerAlgorithm.getPokersType = function (pokers) {
             res.weight = w1;
             res.repeated = len/2;
         }
-        let feiJ = this.isFeiJiDan3Lian(pokers);
-        if(feiJ){
-            res.type = PokerPair.pokersType.fei_ji_dan;
-            res.typeWight = PokerPair.weightMap[res.type];
-            res.weight = feiJ.weight;
-            res.repeated = len /4;
-        }
         //三顺优于飞机
         if(this.isSanShun(pokers)){
             res.type =  PokerPair.pokersType.san_shun;
             res.typeWight = PokerPair.weightMap[res.type];
             res.weight = w1;
             res.repeated = len/3;
+            return res;
+        }
+        let feiJ = this.isFeiJiDan3Lian(pokers);
+        if(feiJ){
+            res.type = PokerPair.pokersType.fei_ji_dan;
+            res.typeWight = PokerPair.weightMap[res.type];
+            res.weight = feiJ.weight;
+            res.repeated = len /4;
         }
         return res;
     }
@@ -1102,13 +1105,36 @@ PokerAlgorithm.getPokersType = function (pokers) {
  * @param currentOut 这一手出牌
  * @return{boolean} 非法,返回false，否则返回true
  */
-PokerAlgorithm.checkOutPokers = function (preOut, currentOut) {
+PokerAlgorithm.checkOutPokers = function (prePokers, currentPokers) {
+    let preOut = this.getPokersType(prePokers);
+    let currentOut = this.getPokersType(currentPokers);
     let preType = preOut.type;
     let curType = currentOut.type;
     if(ERROR_NO!=curType){
         if(preType!=curType){
             if(currentOut.typeWight>preOut.typeWight) {
                 return true;
+            }else {
+                let lenPre = prePokers.length;
+                let currentPokers = currentPokers.length;
+                if(lenPre==currentPokers){
+                    if(8 == lenPre && PokerPair.pokersType.pokersType.fei_ji_dan==preType){
+                           let feiJi = this.isFeiJiDan2Lian(currentPokers);
+                           if(feiJi){
+                               if(feiJi.weight>preOut.weight){
+                                   return true;
+                               }
+                           }
+                    }
+                    if(12 == lenPre && PokerPair.pokersType.pokersType.fei_ji_dan==preType){
+                        let feiJi = this.isFeiJiDan3Lian(currentPokers);
+                        if(feiJi){
+                            if(feiJi.weight>preOut.weight){
+                                return true;
+                            }
+                        }
+                    }
+                }
             }
         }else {
             if(preOut.repeated == currentOut.repeated &&

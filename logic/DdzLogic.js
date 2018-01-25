@@ -110,8 +110,7 @@ class DdzLogic {
                 return;
             }else {
                 if(outIndex){
-                    let pre = PokerAlgorithm.getPokersType(this.preOutInfo.pokers);
-                    let canOut = PokerAlgorithm.checkOutPokers(pre,cur);
+                    let canOut = PokerAlgorithm.checkOutPokers(this.preOutInfo.pokers,pokers);
                     if(!canOut){
                         //非法操作
                         return;
