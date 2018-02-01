@@ -39,6 +39,44 @@ class PokerAlgorithm {}
  * -----------------------------------
  */
 
+/**
+ * 元素是否在数组内
+ * @param {*}value
+ * @param {Array} arr
+ * @return {Boolean}
+ */
+PokerAlgorithm.isInArray = function(value, arr){
+    let len = arr.length;
+    for(let i = 0 ; i < len ; i ++ ){
+        if(value == arr[i]) return i;
+    }
+    return -1;
+}
+
+PokerAlgorithm.allIsValue = function(value, arr){
+    let len = arr.length;
+    for(let i = 0 ; i < len ; i ++ ){
+        if(value != arr[i]) return false;
+    }
+    return true;
+}
+
+
+PokerAlgorithm.getMaxElement = function(arr){
+    let len = arr.length;
+    let res = {
+        index:-1,
+        value:0
+    }
+    for(let i = 0 ; i < len ; i ++ ){
+        if(arr[i]>res.value){
+            res.value = arr[i];
+            res.index = i;
+        }
+    }
+    return res;
+}
+
 //单张牌名称
 PokerAlgorithm.pokerName = function(value,flag=false){
     if(value<PokerPair.count&&value>=0)
@@ -1103,6 +1141,11 @@ PokerAlgorithm.checkOutPokers = function (prePokers, currentPokers) {
     let currentOut = this.getPokersType(currentPokers);
     let preType = preOut.type;
     let curType = currentOut.type;
+    if(0 == prePokers.length){
+        if(ERROR_NO!=curType){
+            return true;
+        }
+    }
     if(ERROR_NO!=curType){
         if(preType!=curType){
             if(currentOut.typeWight>preOut.typeWight) {
@@ -1111,7 +1154,7 @@ PokerAlgorithm.checkOutPokers = function (prePokers, currentPokers) {
                 let lenPre = prePokers.length;
                 let currentPokers = currentPokers.length;
                 if(lenPre==currentPokers){
-                    if(8 == lenPre && PokerPair.pokersType.pokersType.fei_ji_dan==preType){
+                    if(8 == lenPre && PokerPair.pokersType.fei_ji_dan==preType){
                            let feiJi = this.isFeiJiDan2Lian(currentPokers);
                            if(feiJi){
                                if(feiJi.weight>preOut.weight){
@@ -1119,7 +1162,7 @@ PokerAlgorithm.checkOutPokers = function (prePokers, currentPokers) {
                                }
                            }
                     }
-                    if(12 == lenPre && PokerPair.pokersType.pokersType.fei_ji_dan==preType){
+                    if(12 == lenPre && PokerPair.pokersType.fei_ji_dan==preType){
                         let feiJi = this.isFeiJiDan3Lian(currentPokers);
                         if(feiJi){
                             if(feiJi.weight>preOut.weight){
