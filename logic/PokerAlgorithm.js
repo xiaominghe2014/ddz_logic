@@ -77,6 +77,10 @@ PokerAlgorithm.getMaxElement = function(arr){
     return res;
 }
 
+PokerAlgorithm.getEmptyArray = function(len,defaultValue=0){
+    return [...Array(len)].map(_=>defaultValue);
+}
+
 //单张牌名称
 PokerAlgorithm.pokerName = function(value,flag=false){
     if(value<PokerPair.count&&value>=0)

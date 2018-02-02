@@ -12,7 +12,8 @@ const GameStatus = {
             set_banker:3,
             out_pokers:4,
             end:5
-        }
+        };
+
 class CommonLogic {
 
     /** 游戏配置初始化游戏
@@ -36,7 +37,7 @@ class CommonLogic {
         //发牌配置
         this.dealConfig = [17, 17, 17];
         
-        this.start();
+        //this.start();
 
     }
 
@@ -103,9 +104,9 @@ class CommonLogic {
         //可叫分数
         this.validScore = [1,2,3];
         //玩家叫分情况
-        this.callScore = [];
+        this.callScores = [];
         for(let i = 0 ; i < this.playerCount ; i ++){
-            callScore.push(0);
+            this.callScores.push(0);
         }
         //第一个叫分玩家
         this.firstCall = Math.floor(Math.random()*this.playerCount());
@@ -113,6 +114,8 @@ class CommonLogic {
         this.callIndex = this.firstCall;
         //当前叫分次数
         this.callCount = 0;
+        //最后叫牌玩家
+        this.callLast  = -1;
      }
 
      /**
@@ -125,9 +128,10 @@ class CommonLogic {
         if(score){
             if(PokerAlgorithm.isInArray(score, this.validScore)+1){
                 PokerAlgorithm.rmArrayElement(this.validScore,score);
-                this.callScore[sitId] = score;
+                this.callScores[sitId] = score;
+                this.callLast = sitId;
             }else{
-                if(callCount>=this.playerCount){
+                if(this.callCount >= this.playerCount){
                     return false;
                 }     
             }
@@ -139,20 +143,20 @@ class CommonLogic {
 
       //寻找下一个叫分玩家
       nextCall(){
-        let i = PokerAlgorithm.isInArray(3,this.callScore);
+        let i = PokerAlgorithm.isInArray(3,this.callScores);
         if(i+1){
             this.callIndex = -1;
             this.rate *= 3;
             this.setBanker(i); 
         }else{
-            if(callCount == this.playerCount){
-                if(PokerAlgorithm.allIsValue(0,this.callScore)){
+            if(this.callCount == this.playerCount){
+                if(PokerAlgorithm.allIsValue(0,this.callScores)){
                     //都不叫庄则重新开始
                     this.reStart = true;
-                    this.start();
+                    //this.start();
                 }else{
                     //选取最大的叫分庄家
-                    let res = PokerAlgorithm.getMaxElement(this.callScore);
+                    let res = PokerAlgorithm.getMaxElement(this.callScores);
                     this.setBanker(res.index);
                     this.callIndex = -1;
                     this.rate *= res.value;
@@ -187,20 +191,43 @@ class CommonLogic {
         //第几轮
         this.outRoundCount = 0;
         //当前轮第一个出牌玩家
-        this.firstOut = banker;
+        this.firstOut = this.banker;
         //当前该出牌玩家
         this.outIndex = -1;
         //当前轮已出牌次数
         this.outCount = 0;
+
+        //最后一手出牌
+        this.lastOut = -1;
+        this.lastOutPokers = [];
         this.nextOut();
         //当前最大是谁的牌
         this.maxIndex = -1;
         //当前最大牌组
         this.maxPokers = [];
         this.playersOutCount = [];
+
         for(let i = 0 ; i < this.playerCount ; i ++){
             this.playersOutCount.push(0);
         }
+
+        //所有轮出牌信息
+        this.allOutInfo = [];
+        this.addRoundInfo();
+    }
+
+    /**
+     * 添加本轮出牌消息
+     */
+    addRoundInfo(){
+        let info = {
+            first : this.firstOut,
+            out :[]
+        };
+        for(let i = 0 ; i < this.playerCount ; i++){
+            info.out.push([]);
+        }
+        this.allOutInfo.push(info);
     }
 
     /**
@@ -235,6 +262,10 @@ class CommonLogic {
         if(sitId == this.firstOut && 0 == pokers.length){
             return false;
         }
+        this.lastOut = sitId;
+        this.lastOutPokers = pokers.concat();
+        let len = this.allOutInfo.length;
+        this.allOutInfo[len-1].out[sitId] = pokers.concat();
         this.outCount++;
         this.checkOut();
         this.checkGameEnd();
@@ -266,6 +297,7 @@ class CommonLogic {
         this.maxIndex = -1;
         //当前最大牌组
         this.maxPokers = [];
+        this.addRoundInfo();
     }
 
     /**
@@ -274,7 +306,7 @@ class CommonLogic {
     checkGameEnd(){
         for(let i = 0 ; i < this.playerCount ; i ++ ){
             if(0 == this.handCards[i].length){
-                this.setWiner(i);
+                this.setWinner(i);
             }
         }
     }
@@ -282,7 +314,7 @@ class CommonLogic {
     /**
      * 设置谁获胜
      */
-     setWiner(sitId){
+     setWinner(sitId){
          this.status = GameStatus.end;
          this.result = {
              score:[]
@@ -292,7 +324,7 @@ class CommonLogic {
          }
         if(sitId == this.banker){
             for(let i = 0 ; i < this.playerCount ; i++){
-                if(i==banker){
+                if(i==this.banker){
                     this.result.push(this.rate*2);
                 }else{
                     this.result.push(-this.rate);
@@ -300,7 +332,7 @@ class CommonLogic {
             }
         }else{
             for(let i = 0 ; i < this.playerCount ; i++){
-                if(i==banker){
+                if(i==this.banker){
                     this.result.push(-this.rate*2);
                 }else{
                     this.result.push(this.rate);
@@ -316,7 +348,7 @@ class CommonLogic {
         if(sitId == this.banker){
             let maxCount = 0;
             for(let i = 0 ; i < this.playerCount ; i++){
-                if(i!=banker){
+                if(i!=this.banker){
                     let count = this.playersOutCount[i];
                     maxCount = maxCount>count?maxCount:count;
                 }
@@ -338,15 +370,98 @@ class CommonLogic {
      */
     getPokersRate(pokers){
         let type = PokerAlgorithm.getPokersType(pokers).type;
-        if(PokerPair.type.pokersType.zha_dan == type){
+        if(PokerPair.pokersType.zha_dan == type){
             return 2;
         }
-        if(PokerPair.type.pokersType.huo_ji == type){
+        if(PokerPair.pokersType.huo_ji == type){
             return 2;
         }
         return 1;
+    }
+
+
+    /**
+     * ------------------------------------
+     * ---------------对外额外接口-----------
+     * ------------------------------------
+     */
+    getHandCards(sitId){
+        return this.handCards[sitId].concat();
+    }
+
+    getHideCards(sitId){
+        let len = this.handCards[sitId].length;
+        return PokerAlgorithm.getEmptyArray(len, 255);
+    }
+
+    getDealCards(sitId){
+        let len = this.playerCount;
+        let arr = [];
+        for(let i = 0 ; i < len ; i ++ ){
+            let cards = i==sitId?this.getHandCards(i):this.getHideCards(i);
+            arr.push(cards);
+        }
+        return arr;
+    }
+
+    getAllCards(){
+        let len = this.playerCount;
+        let arr = [];
+        for(let i = 0 ; i < len ; i ++ ){
+            let cards = this.getHandCards(i);
+            arr.push(cards);
+        }
+        return arr;
+    }
+
+    getCallScoreOpt(){
+        return {
+            seatId : this.callIndex,
+            scores : this.validScore.concat(),
+            timeout : 20
+        }
+    }
+
+    getOutOpt(){
+        return {
+            seatId: this.outIndex,
+            cardsPre: this.getCurrentOutInfo().out.concat(),
+            cardsMax: this.maxPokers.concat(),
+            timeout: 20
+        }
+    }
+
+    getBankerLastCards(sitId){
+        if(sitId==this.banker){
+            return this.lastPokers.concat()
+        }else {
+            return PokerAlgorithm.getEmptyArray(this.lastPokers.length,255);
+        }
+    }
+
+    getScores(){
+        return this.result.score.concat();
+    }
+
+    getLastCallScore(){
+        return {
+            seatId : this.callLast,
+            score : this.callScores[this.callLast]
+        }
+    }
+
+    getLastOut(){
+        return {
+            seatId : this.lastOut,
+            cards : this.lastOutPokers.concat()
+        }
+    }
+
+    getCurrentOutInfo(){
+        return this.allOutInfo[this.outRoundCount];
     }
 }
 
 module.exports.GameStatus = GameStatus;
 module.exports.GameLogic = CommonLogic;
+
