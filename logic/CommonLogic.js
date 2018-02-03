@@ -38,7 +38,8 @@ class CommonLogic {
         this.dealConfig = [17, 17, 17];
         
         //this.start();
-
+        //重新叫分次数
+        this.startCallCount = 0;
     }
 
     //开始游戏
@@ -98,6 +99,7 @@ class CommonLogic {
      * 叫分
      */
      startCallScore(){
+        this.startCallCount++;
         this.status = GameStatus.call_score;
         //庄家座位号
         this.banker = -1;
@@ -108,8 +110,9 @@ class CommonLogic {
         for(let i = 0 ; i < this.playerCount ; i ++){
             this.callScores.push(0);
         }
+
         //第一个叫分玩家
-        this.firstCall = Math.floor(Math.random()*this.playerCount());
+        this.firstCall = Math.floor(Math.random()*this.playerCount);
         //当前叫分玩家
         this.callIndex = this.firstCall;
         //当前叫分次数
@@ -135,6 +138,9 @@ class CommonLogic {
                     return false;
                 }     
             }
+        }else {
+            this.callScores[sitId] = score;
+            this.callLast = sitId;
         }
         this.callCount++;
         this.nextCall();
@@ -151,8 +157,12 @@ class CommonLogic {
         }else{
             if(this.callCount == this.playerCount){
                 if(PokerAlgorithm.allIsValue(0,this.callScores)){
-                    //都不叫庄则重新开始
-                    this.reStart = true;
+                    if(this.startCallCount>2){
+                        this.setBanker(this.callIndex);
+                    }else {
+                        //都不叫庄则重新开始
+                        this.reStart = true;
+                    }
                     //this.start();
                 }else{
                     //选取最大的叫分庄家
@@ -325,17 +335,17 @@ class CommonLogic {
         if(sitId == this.banker){
             for(let i = 0 ; i < this.playerCount ; i++){
                 if(i==this.banker){
-                    this.result.push(this.rate*2);
+                    this.result.score.push(this.rate*2);
                 }else{
-                    this.result.push(-this.rate);
+                    this.result.score.push(-this.rate);
                 }   
             }
         }else{
             for(let i = 0 ; i < this.playerCount ; i++){
                 if(i==this.banker){
-                    this.result.push(-this.rate*2);
+                    this.result.score.push(-this.rate*2);
                 }else{
-                    this.result.push(this.rate);
+                    this.result.score.push(this.rate);
                 }   
             }
         }
@@ -459,6 +469,13 @@ class CommonLogic {
 
     getCurrentOutInfo(){
         return this.allOutInfo[this.outRoundCount];
+    }
+
+    getAutoOut(sitId){
+        if(sitId==this.firstOut){
+            return [this.handCards[sitId][0]];
+        }
+        return [];
     }
 }
 
