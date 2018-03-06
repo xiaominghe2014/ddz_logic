@@ -1852,6 +1852,10 @@ PokerAlgorithm.sortOut = function(outPokers){
 }
 
 
+PokerAlgorithm.getElementType = function(e){
+    return Object.prototype.toString.call(e);
+}
+
 // let arr = PokerAlgorithm.sortOut([14,27,15,28,2])
 // console.log(arr)
 module.exports = PokerAlgorithm;

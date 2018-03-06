@@ -284,7 +284,6 @@ class CommonLogic {
                 }else{
                     //选取最大的叫分庄家
                     let res = PokerAlgorithm.getMaxElement(this.callScores);
-                    this.setBanker(res.index);
                     this.callIndex = -1;
                     this.rate *= res.value;
                     this.setBanker(res.index); 
@@ -304,6 +303,7 @@ class CommonLogic {
         this.startOut();
         this.status = GameStatus.set_banker;
         this.replayData.banker = banker;
+        this.callIndex = -1;
     }
 
     /**
@@ -365,13 +365,13 @@ class CommonLogic {
     outPokers(sitId, pokers){
         console.log('out seatId',sitId);
         console.log('out Value',pokers);
-        if(typeof pokers != 'array'){
+        if(PokerAlgorithm.getElementType(pokers)!='[object Array]'){
             return false;
         }
         if(pokers.length){
             let pLen = pokers.length
             while (pLen){
-                if(typeof pokers[pLen-1] != 'number'){
+                if(PokerAlgorithm.getElementType(pokers[pLen-1]) != '[object Number]'){
                     return false;
                 }
                 pLen--;
