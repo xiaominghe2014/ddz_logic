@@ -365,13 +365,13 @@ class CommonLogic {
     outPokers(sitId, pokers){
         console.log('out seatId',sitId);
         console.log('out Value',pokers);
-        if(PokerAlgorithm.getElementType(pokers)!='[object Array]'){
+        if(PokerAlgorithm.getElementType(pokers)!='Array'){
             return false;
         }
         if(pokers.length){
             let pLen = pokers.length
             while (pLen){
-                if(PokerAlgorithm.getElementType(pokers[pLen-1]) != '[object Number]'){
+                if(PokerAlgorithm.getElementType(pokers[pLen-1]) != 'Number'){
                     return false;
                 }
                 pLen--;
