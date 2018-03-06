@@ -6,6 +6,32 @@
 
 "use strict";
 
+if(typeof (String.prototype.format)=='undefined'){
+    String.prototype.format = function(args) {
+        var result = this;
+        if (arguments.length > 0) {
+            if (arguments.length == 1 && typeof (args) == "object") {
+                for (var key in args) {
+                    if(args[key]!=undefined){
+                        var reg = new RegExp("({" + key + "})", "g");
+                        result = result.replace(reg, args[key]);
+                    }
+                }
+            }
+            else {
+                for (var i = 0; i < arguments.length; i++) {
+                    if (arguments[i] != undefined) {
+                        //var reg = new RegExp("({[" + i + "]})", "g");//这个在索引大于9时会有问题，谢谢何以笙箫的指出
+                        var reg= new RegExp("({)" + i + "(})", "g");
+                        result = result.replace(reg, arguments[i]);
+                    }
+                }
+            }
+        }
+        return result;
+    }
+}
+
 const PokerPair = require("./PokerPair");
 const ERROR_NO = 10010;
 const ERROR_STR = 'WRONG';
@@ -181,32 +207,56 @@ PokerAlgorithm.shuffleArray = function (array) {
  * @return{Object}
  */
 PokerAlgorithm.dealPoker = function (pokers, dealConfig) {
-    let playerLen = dealConfig.length;
-    let res = [];
-    let cardsMaxCount = dealConfig[0];
-    for (let i = 0 ; i <playerLen ; i ++ ){
-        res.push([]);
-        cardsMaxCount = dealConfig[i]>cardsMaxCount?dealConfig[i]:cardsMaxCount;
-    }
-    for (let j = 0 ; j< cardsMaxCount; j++){
-        let currentLen = playerLen;
-        while(currentLen--)
-        {
-            if(res.length<dealConfig[currentLen]
-            &&pokers.length)
-                res[currentLen].push(pokers.pop());
+    //做牌标记
+    let make = true;
+    if(make){
+        return PokerAlgorithm.makeCards(pokers)
+    }else {
+        let playerLen = dealConfig.length;
+        let res = [];
+        let cardsMaxCount = dealConfig[0];
+        for (let i = 0 ; i <playerLen ; i ++ ){
+            res.push([]);
+            cardsMaxCount = dealConfig[i]>cardsMaxCount?dealConfig[i]:cardsMaxCount;
         }
+        for (let j = 0 ; j< cardsMaxCount; j++){
+            let currentLen = playerLen;
+            while(currentLen--)
+            {
+                if(res.length<dealConfig[currentLen]
+                    &&pokers.length)
+                    res[currentLen].push(pokers.pop());
+            }
+        }
+        let left = [];
+        while(pokers.length){
+            left.push(pokers.pop());
+        }
+        return {
+            res:res,
+            pokers:pokers,
+            left:left
+        };
     }
-    let left = [];
-    while(pokers.length){
-        left.push(pokers.pop());
-    }
-    return {
-        res:res,
-        pokers:pokers,
-        left:left
-    };
 };
+
+/**
+ * 做牌
+ * @param pokers
+ * @return {{res: *[], pokers: *[], left: *[]}}
+ */
+PokerAlgorithm.makeCards = function (pokers) {
+    return {
+        res:[[3,4,5,6,7,8,9,10,11,13+3,13+4,13+5,13+6,13+7,13+8,13+9,13+10],[
+            0,13,1,13+1,2,13+2,26,26+1,26+2,26+3,26+4,12,13+12,26+12,39+12,52,53
+        ],[    26+7,26+8,26+9,26+10,26+11,
+            39+0,39+1,39+2,39+3,26+4,39+5,39+6,39+7,39+8,39+9,39+10,39+11]],
+        pokers:[13+11,
+            26+5,26+6],
+        left:[13+11,
+            26+5,26+6]
+    };
+}
 
 
 //扑克类型权值
@@ -245,6 +295,29 @@ PokerAlgorithm.getPokerWeightInfo = function(pokers){
         info[w]++;
     }
     return info;
+}
+
+
+PokerAlgorithm.getPokerWeightMessage = function(pokers){
+    let info = [
+        0,
+        0,0,0,0,0,
+        0,0,0,0,0,
+        0,0,0,0,0
+    ];
+    let cards = [
+        [],
+        [],[],[],[],[],
+        [],[],[],[],[],
+        [],[],[],[],[]
+    ]
+    let len = pokers.length;
+    for (let i = 0 ; i < len ; i++){
+        let w = this.pokerWeight(pokers[i]);
+        info[w]++;
+        cards[w].push(pokers[i])
+    }
+    return {info:info,cards:cards};
 }
 
 //从数组b删除a
@@ -1156,8 +1229,8 @@ PokerAlgorithm.checkOutPokers = function (prePokers, currentPokers) {
                 return true;
             }else {
                 let lenPre = prePokers.length;
-                let currentPokers = currentPokers.length;
-                if(lenPre==currentPokers){
+                let lenCurrentPokers = currentPokers.length;
+                if(lenPre==lenCurrentPokers){
                     if(8 == lenPre && PokerPair.pokersType.fei_ji_dan==preType){
                            let feiJi = this.isFeiJiDan2Lian(currentPokers);
                            if(feiJi){
@@ -1187,5 +1260,599 @@ PokerAlgorithm.checkOutPokers = function (prePokers, currentPokers) {
 };
 
 
+PokerAlgorithm.sort = function(a,b){
+    return PokerAlgorithm.pokerWeight(b)-PokerAlgorithm.pokerWeight(a);
+};
+
+
+PokerAlgorithm.printPokers = function(pokers){
+    let cards = pokers.concat();
+    let str = '';
+    for(let v of cards){
+        str += '\t'+PokerAlgorithm.pokerName(v,true)
+    }
+    console.log(str)
+    return str
+};
+
+
+/**
+ * 出牌提示
+ * @param maxOutPokers
+ * @param handPokers
+ * @return {Array}
+ */
+PokerAlgorithm.outTips = function (maxOutPokers, handPokers) {
+    let len = maxOutPokers.length
+    let tips = [];
+    if(0==len){
+        return PokerAlgorithm.getDanZh(handPokers);
+    }
+    let maxInfo = PokerAlgorithm.getPokersType(maxOutPokers);
+    let type = maxInfo.type
+    switch (type){
+        case PokerPair.pokersType.dan_zh:
+            return PokerAlgorithm.getDanZhTips(maxInfo, handPokers);
+        case PokerPair.pokersType.dui_zi:
+            return PokerAlgorithm.getDuiZiTips(maxInfo, handPokers);
+        case PokerPair.pokersType.san_zh:
+            return PokerAlgorithm.getSanZhTips(maxInfo, handPokers);
+        case PokerPair.pokersType.san_dai_1:
+            return PokerAlgorithm.getSanDai1Tips(maxInfo, handPokers);
+        case PokerPair.pokersType.zha_dan:
+            return PokerAlgorithm.getZhaDanTips(maxInfo, handPokers);
+        case PokerPair.pokersType.san_dai_2:
+            return PokerAlgorithm.getSanDai2Tips(maxInfo, handPokers);
+        case PokerPair.pokersType.shun_zi:
+            return PokerAlgorithm.getShunZiTips(maxInfo, handPokers);
+        case PokerPair.pokersType.lian_dui:
+            return PokerAlgorithm.getLianDuiTips(maxInfo, handPokers);
+        case PokerPair.pokersType.san_shun:
+            return PokerAlgorithm.getSanShunTips(maxInfo, handPokers);
+        case PokerPair.pokersType.fei_ji_dan:
+            return PokerAlgorithm.getFeiJiDanTips(maxInfo, handPokers);
+        case PokerPair.pokersType.fei_ji_sh:
+            return PokerAlgorithm.getFeiJiShTips(maxInfo, handPokers);
+        case PokerPair.pokersType.si_dai_2:
+            return PokerAlgorithm.getSiDai2Tips(maxInfo, handPokers);
+        case PokerPair.pokersType.si_dai_2_dui:
+            return PokerAlgorithm.getSiDai2DuiTips(maxInfo, handPokers);
+    }
+    return tips;
+}
+
+
+PokerAlgorithm.getDanZhTips = function(maxInfo, handPokers){
+    let tips = []
+    let weight = maxInfo.weight;
+    let len = handPokers.length
+    for(let i = 0; i<len ; i++){
+        let w = PokerAlgorithm.pokerWeight(handPokers[i]);
+        if(w>weight){
+            tips.push([handPokers[i]]);
+        }
+    }
+    tips = tips.concat(PokerAlgorithm.getTypeTips(maxInfo.typeWight,handPokers));
+    return tips;
+}
+
+
+PokerAlgorithm.getDuiZiTips = function(maxInfo, handPokers){
+    let tips = []
+    let duizi = PokerAlgorithm.getDuiZi(handPokers)
+    let len = duizi.length;
+    for(let i = 0 ; i < len ; i++){
+        let duiziW = PokerAlgorithm.pokerWeight(duizi[i][0]);
+        if(duiziW>maxInfo.weight)
+            tips.push(duizi[i]);
+    }
+    tips = tips.concat(PokerAlgorithm.getTypeTips(maxInfo.typeWight,handPokers));
+    return tips;
+}
+
+PokerAlgorithm.getSanZhTips = function(maxInfo, handPokers){
+    let tips = []
+    let sanzh = PokerAlgorithm.getSanZhang(handPokers)
+    let len = sanzh.length;
+    for(let i = 0 ; i < len ; i++){
+        let w = PokerAlgorithm.pokerWeight(sanzh[i][0]);
+        if(w>maxInfo.weight)
+            tips.push(sanzh[i]);
+    }
+    tips = tips.concat(PokerAlgorithm.getTypeTips(maxInfo.typeWight,handPokers));
+    return tips;
+}
+
+PokerAlgorithm.getSanDai1Tips = function(maxInfo, handPokers){
+    let tips = []
+    let sandai1 = PokerAlgorithm.getSanDai1(handPokers);
+    let len = sandai1.length;
+    for(let i = 0 ; i < len ; i++){
+        let w = PokerAlgorithm.pokerWeight(sandai1[i][0]);
+        if(w>maxInfo.weight)
+            tips.push(sandai1[i]);
+    }
+    tips = tips.concat(PokerAlgorithm.getTypeTips(maxInfo.typeWight,handPokers));
+    return tips;
+}
+
+
+PokerAlgorithm.getZhaDanTips = function(maxInfo, handPokers){
+    let tips = []
+    let zhadan = PokerAlgorithm.getZhaDan(handPokers);
+    let len = zhadan.length
+    for(let i = 0 ; i< len ; i++){
+        let w = PokerAlgorithm.pokerWeight(zhadan[i][0]);
+        if(w>maxInfo.weight)
+            tips.push(zhadan[i])
+    }
+    tips = tips.concat(PokerAlgorithm.getTypeTips(maxInfo.typeWight,handPokers));
+    return tips;
+}
+
+
+PokerAlgorithm.getSanDai2Tips = function(maxInfo, handPokers){
+    let tips = []
+    let sandai2 = PokerAlgorithm.getSanDai1(handPokers);
+    let len = sandai2.length;
+    for(let i = 0 ; i < len ; i++){
+        let w = PokerAlgorithm.pokerWeight(sandai2[i][0]);
+        if(w>maxInfo.weight)
+            tips.push(sandai2[i]);
+    }
+    tips = tips.concat(PokerAlgorithm.getTypeTips(maxInfo.typeWight,handPokers));
+    return tips;
+}
+
+
+PokerAlgorithm.getShunZiTips = function(maxInfo, handPokers){
+    let tips = []
+    let weight = maxInfo.weight;
+    let len = maxInfo.repeated;
+    let handTmp = [].concat(handPokers);
+    let msg = PokerAlgorithm.getPokerWeightMessage(handTmp);
+    let count = 0;
+    let tip = [];
+    for(let i = weight+1 ; i < 13 ; i++){
+        if(msg.info[i]){
+            count++;
+            tip.push(msg.cards[i][0]);
+            if(len == count){
+                tips.push(tip);
+                break;
+            }
+        }else {
+            if(count){
+                count = 0;
+                tip = [];
+            }
+        }
+    }
+    tips = tips.concat(PokerAlgorithm.getTypeTips(maxInfo.typeWight,handPokers));
+    return tips;
+}
+
+
+PokerAlgorithm.getLianDuiTips = function(maxInfo, handPokers){
+    let tips = []
+    let weight = maxInfo.weight;
+    let len = maxInfo.repeated;
+    let handTmp = [].concat(handPokers);
+    let msg = PokerAlgorithm.getPokerWeightMessage(handTmp);
+    let count = 0;
+    let tip = [];
+    for(let i = weight+1 ; i < 13 ; i++){
+        if(2<=msg.info[i]){
+            count++;
+            tip = tip.concat([msg.cards[i][0],msg.cards[i][1]]);
+            if(len == count){
+                tips.push(tip);
+                break;
+            }
+        }else {
+            if(count){
+                count = 0;
+                tip = [];
+            }
+        }
+    }
+    tips = tips.concat(PokerAlgorithm.getTypeTips(maxInfo.typeWight,handPokers));
+    return tips;
+}
+
+
+PokerAlgorithm.getSanShunTips = function(maxInfo, handPokers){
+    let tips = []
+    let weight = maxInfo.weight;
+    let len = maxInfo.repeated;
+    let handTmp = [].concat(handPokers);
+    let msg = PokerAlgorithm.getPokerWeightMessage(handTmp);
+    let count = 0;
+    let tip = [];
+    for(let i = weight+1 ; i < 13 ; i++){
+        if(3<=msg.info[i]){
+            count++;
+            tip = tip.concat([msg.cards[i][0],msg.cards[i][1],msg.cards[i][2]]);
+            if(len == count){
+                tips.push(tip);
+                break;
+            }
+        }else {
+            if(count){
+                count = 0;
+                tip = [];
+            }
+        }
+    }
+    tips = tips.concat(PokerAlgorithm.getTypeTips(maxInfo.typeWight,handPokers));
+    return tips;
+}
+
+PokerAlgorithm.getFeiJiDanTips = function(maxInfo, handPokers){
+    let tips = []
+    tips = tips.concat(PokerAlgorithm.getFeiJiDan(maxInfo, handPokers))
+    tips = tips.concat(PokerAlgorithm.getTypeTips(maxInfo.typeWight,handPokers));
+    return tips;
+}
+
+
+PokerAlgorithm.getFeiJiShTips = function(maxInfo, handPokers){
+    let tips = []
+    tips = tips.concat(PokerAlgorithm.getFeiJiSh(maxInfo, handPokers))
+    tips = tips.concat(PokerAlgorithm.getTypeTips(maxInfo.typeWight,handPokers));
+    return tips;
+}
+
+
+PokerAlgorithm.getSiDai2Tips = function(maxInfo, handPokers){
+    let tips = []
+    let sidai2 = PokerAlgorithm.getSiDai2(handPokers);
+    let weight = maxInfo.weight;
+    let len = sidai2.length;
+    for(let i = 0 ; i < len ; i++){
+        if(PokerAlgorithm.pokerWeight(sidai2[i][0])>weight){
+            tips.push(sidai2[i]);
+        }
+    }
+    tips = tips.concat(PokerAlgorithm.getTypeTips(maxInfo.typeWight,handPokers));
+    return tips;
+}
+
+PokerAlgorithm.getSiDai2DuiTips = function(maxInfo, handPokers){
+    let tips = []
+    let sidai2Dui = PokerAlgorithm.getSiDai2Dui(handPokers);
+    let weight = maxInfo.weight;
+    let len = sidai2Dui.length;
+    for(let i = 0 ; i < len ; i++){
+        if(PokerAlgorithm.pokerWeight(sidai2Dui[i][0])>weight){
+            tips.push(sidai2Dui[i]);
+        }
+    }
+    tips = tips.concat(PokerAlgorithm.getTypeTips(maxInfo.typeWight,handPokers));
+    return tips;
+}
+
+PokerAlgorithm.getTypeTips = function (weight, handPokers) {
+    let tips = []
+    let zhadanW = PokerAlgorithm.pokerTypeWeight[PokerPair.pokersType.zha_dan]
+    if(weight<zhadanW){
+        let zhadan = PokerAlgorithm.getZhaDan(handPokers);
+        if(zhadan.length){
+            tips = tips.concat(zhadan);
+        }
+    }
+    let huo_jian = PokerAlgorithm.getHuoJian(handPokers)
+    if(huo_jian.length){
+        tips.push(huo_jian)
+    }
+    return tips;
+}
+
+
+PokerAlgorithm.getFeiJiDan = function(maxInfo,handPokers) {
+    let wMax = maxInfo.weight;
+    let len = maxInfo.repeated;
+    let tips = [];
+    let handTmp = [].concat(handPokers);
+    let msg = PokerAlgorithm.getPokerWeightMessage(handTmp);
+    let count = 0;
+    for (let i = wMax; i < 14; i++) {
+        let tip = []
+        if (3 <= msg.info[i]) {
+            tip = tip.concat([msg.cards[i][0],msg.cards[i][1],msg.cards[i][2]]);
+            count++;
+            if(len==count){
+                let hand2 = PokerAlgorithm.rmAFromB(tip,[].concat(handPokers));
+                let msg2 = PokerAlgorithm.getPokerWeightMessage(hand2);
+                let l = 0;
+                for(let j = 0 ; j < 16 ; j++){
+                    let cl = msg2.info[j]
+                    for(let k = 0 ; k < cl ; k++){
+                        tip.push(msg2.cards[j][k])
+                        l++;
+                        if(l==len){
+                            tips.push(tip)
+                            break;
+                        }
+                    }
+                }
+            }
+        }else {
+            count = 0;
+            tip = [];
+        }
+    }
+    return tips;
+}
+
+
+PokerAlgorithm.getFeiJiSh = function(maxInfo,handPokers) {
+    let wMax = maxInfo.weight;
+    let len = maxInfo.repeated;
+    let tips = [];
+    let handTmp = [].concat(handPokers);
+    let msg = PokerAlgorithm.getPokerWeightMessage(handTmp);
+    let count = 0;
+    for (let i = wMax; i < 14; i++) {
+        let tip = []
+        if (3 <= msg.info[i]) {
+            tip = tip.concat([msg.cards[i][0],msg.cards[i][1],msg.cards[i][2]]);
+            count++;
+            if(len==count){
+                let hand2 = PokerAlgorithm.rmAFromB(tip,[].concat(handPokers));
+                let msg2 = PokerAlgorithm.getPokerWeightMessage(hand2);
+                let l = 0;
+                for(let j = 0 ; j < 16 ; j++){
+                    let cl = msg2.info[j]
+                    if(4 == cl){
+                        tip.push(msg2.cards[j][0])
+                        tip.push(msg2.cards[j][1])
+                        l++;
+                        if(l==len){
+                            tips.push(tip)
+                            break;
+                        }
+                        tip.push(msg2.cards[j][2])
+                        tip.push(msg2.cards[j][3])
+                        l++;
+                        if(l==len){
+                            tips.push(tip)
+                            break;
+                        }
+                    }
+                    if(2<=cl){
+                        tip.push(msg2.cards[j][0])
+                        tip.push(msg2.cards[j][1])
+                        l++;
+                        if(l==len){
+                            tips.push(tip)
+                            break;
+                        }
+                    }
+                }
+            }
+        }else {
+            count = 0;
+            tip = [];
+        }
+    }
+    return tips;
+}
+
+
+PokerAlgorithm.getSiDai2Dui =  function(handPokers){
+    let tips = [];
+    let handTmp = [].concat(handPokers);
+    let msg = PokerAlgorithm.getPokerWeightMessage(handTmp);
+    for(let i = 0 ; i < 14 ; i++){
+        if(4 == msg.info[i]){
+            let tip = [msg.cards[i][0],msg.cards[i][1],msg.cards[i][2],msg.cards[i][3]];
+            for(let j = 0 ; j < 16 ; j++){
+                if(i!=j){
+                    if(4==msg.info[j]){
+                        tip = tip.concat([msg.cards[j][0],msg.cards[j][1],msg.cards[j][2],msg.cards[j][3]])
+                        tips.push(tip);
+                        break;
+                    }
+                    if(2<=msg.info[j]){
+                        for(let k = 0 ; k < 16 ; k++){
+                            if(i!=j&&i!=k&&j!=k&&2==msg.info[k]){
+                                tip = tip.concat([msg.cards[j][0],msg.cards[j][1]]);
+                                tip = tip.concat([msg.cards[k][0],msg.cards[k][1]]);
+                                tips.push(tip);
+                                break;
+                            }
+                        }
+                        if(8 == tip.length){
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return tips;
+}
+
+
+PokerAlgorithm.getSiDai2 =  function(handPokers){
+    let tips = [];
+    let handTmp = [].concat(handPokers);
+    let msg = PokerAlgorithm.getPokerWeightMessage(handTmp);
+    for(let i = 0 ; i < 14 ; i++){
+        if(4 == msg.info[i]){
+            let tip = [msg.cards[i][0],msg.cards[i][1],msg.cards[i][2],msg.cards[i][3]];
+            for(let j = 0 ; j < 16 ; j++){
+                if(i!=j){
+                    if(2<=msg.info[j]){
+                        tip = tip.concat([msg.cards[j][0],msg.cards[j][1]])
+                        tips.push(tip);
+                        break;
+                    }
+                    if(1==msg.info[j]){
+                        for(let k = 0 ; k < 16 ; k++){
+                            if(i!=j&&i!=k&&j!=k&&msg.info[k]){
+                                tip.push(msg.cards[j][0]);
+                                tip.push(msg.cards[k][0]);
+                                tips.push(tip);
+                                break;
+                            }
+                        }
+                        if(6 == tip.length){
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return tips;
+}
+
+
+PokerAlgorithm.getSanDai2 =  function(handPokers){
+    let tips = [];
+    let handTmp = [].concat(handPokers);
+    let msg = PokerAlgorithm.getPokerWeightMessage(handTmp);
+    for(let i = 0 ; i < 14 ; i++){
+        if(3 <= msg.info[i]){
+            for(let j = 0 ; j < 16 ; j++){
+                if(i!=j&&2<=msg.info[j]){
+                    tips.push([msg.cards[i][0],msg.cards[i][1],msg.cards[i][2],msg.cards[j][0],msg.cards[j][1]]);
+                    break;
+                }
+            }
+        }
+    }
+    return tips;
+}
+
+
+PokerAlgorithm.getSanDai1 =  function(handPokers){
+    let tips = [];
+    let handTmp = [].concat(handPokers);
+    let msg = PokerAlgorithm.getPokerWeightMessage(handTmp);
+    for(let i = 0 ; i < 14 ; i++){
+        if(3 <= msg.info[i]){
+            for(let j = 0 ; j < 16 ; j++){
+                if(i!=j&&msg.info[j]){
+                    tips.push([msg.cards[i][0],msg.cards[i][1],msg.cards[i][2],msg.cards[j][0]]);
+                    break;
+                }
+            }
+        }
+    }
+    return tips;
+}
+
+PokerAlgorithm.getSanZhang = function (handPokers) {
+    let tips = [];
+    let handTmp = [].concat(handPokers);
+    let msg = PokerAlgorithm.getPokerWeightMessage(handTmp);
+    for(let i = 0 ; i < 14 ; i++){
+        if(3 <= msg.info[i]){
+            tips.push([msg.cards[i][0],msg.cards[i][1],msg.cards[i][2]]);
+        }
+    }
+    return tips;
+}
+
+PokerAlgorithm.getDuiZi = function (handPokers) {
+    let tips = [];
+    let handTmp = [].concat(handPokers);
+    let msg = PokerAlgorithm.getPokerWeightMessage(handTmp);
+    for(let i = 0 ; i < 14 ; i++){
+        if(2 <= msg.info[i]){
+            tips.push([msg.cards[i][0],msg.cards[i][1]]);
+        }
+    }
+    return tips;
+}
+
+PokerAlgorithm.getZhaDan = function(handPokers){
+    let tips = [];
+    let handTmp = [].concat(handPokers);
+    let msg = PokerAlgorithm.getPokerWeightMessage(handTmp);
+    for(let i = 0 ; i < 14 ; i++){
+        if(4 == msg.info[i]){
+            tips.push(msg.cards[i][0]);
+        }
+    }
+    return tips;
+}
+
+PokerAlgorithm.getHuoJian = function (handPokers) {
+    let handTmp = [].concat(handPokers);
+    let msg = PokerAlgorithm.getPokerWeightMessage(handTmp);
+    if(msg.info[14]&&msg.info[15]){
+        return [52,53];
+    }
+    return[]
+}
+
+PokerAlgorithm.getDanZh = function (handPokers){
+    let tips = [];
+    let handTmp = [].concat(handPokers);
+    let len = handTmp.length
+    for(let i = 0; i<len ; i++){
+        tips.push([handPokers[i]]);
+    }
+    return tips;
+}
+
+
+PokerAlgorithm.sortOut = function(outPokers){
+    outPokers.sort(PokerAlgorithm.sort);
+    let info = PokerAlgorithm.getPokersType(outPokers);
+    let type = info.type
+    let tmp = [].concat(outPokers)
+    let res = []
+    let weight = info.weight
+    let len = info.repeated
+    let msg = PokerAlgorithm.getPokerWeightMessage(tmp);
+    let count = 0;
+    switch (type){
+        case PokerPair.pokersType.san_dai_1:
+        case PokerPair.pokersType.san_dai_2:
+            for(let i = 0 ; i < tmp.length ; i++){
+                let w = PokerAlgorithm.pokerWeight(tmp[i]);
+                if(w==weight){
+                    res.push(tmp[i]);
+                    count++;
+                    if(3==count) break;
+                }
+            }
+            PokerAlgorithm.rmAFromB(res,tmp);
+            res = res.concat(tmp);
+            return res;
+        case PokerPair.pokersType.si_dai_2:
+        case PokerPair.pokersType.si_dai_2_dui:
+            for(let i = 0 ; i < tmp.length ; i++){
+                let w = PokerAlgorithm.pokerWeight(tmp[i]);
+                if(w==weight){
+                    res.push(tmp[i]);
+                    count++;
+                    if(4==count) break;
+                }
+            }
+            PokerAlgorithm.rmAFromB(res,tmp);
+            res = res.concat(tmp);
+            return res;
+        case PokerPair.pokersType.fei_ji_dan:
+        case PokerPair.pokersType.fei_ji_sh:
+            for(let i = weight ; i < len + weight ; i ++){
+                let cards = [msg.cards[i][0],msg.cards[i][1],msg.cards[i][2]]
+                res = res.concat(cards);
+            }
+            PokerAlgorithm.rmAFromB(res,tmp);
+            res = res.concat(tmp);
+            return res;
+    }
+    return outPokers;
+}
+
+
+// let arr = PokerAlgorithm.sortOut([14,27,15,28,2])
+// console.log(arr)
 module.exports = PokerAlgorithm;
 
